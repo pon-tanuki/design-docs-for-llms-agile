@@ -1,0 +1,263 @@
+# =============================================================================
+# スキーマ定義（唯一のソース）
+# =============================================================================
+# このファイルは型定義の唯一のソースである。
+# 他のドキュメントでは型を再定義せず、このファイルを参照すること。
+#
+# フォーマット: OpenAPI 3.0 準拠
+# =============================================================================
+
+openapi: 3.0.3
+info:
+  title: <プロジェクト名> API Schema
+  version: 1.0.0
+  description: 型定義の唯一のソース
+
+# =============================================================================
+# 共通スキーマ
+# =============================================================================
+components:
+  schemas:
+    # -------------------------------------------------------------------------
+    # 基本型
+    # -------------------------------------------------------------------------
+    Id:
+      type: string
+      format: uuid
+      description: UUID形式の一意識別子
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    Email:
+      type: string
+      format: email
+      description: RFC準拠のメールアドレス
+      example: "user@example.com"
+
+    Password:
+      type: string
+      format: password
+      minLength: 8
+      description: パスワード（8文字以上）
+      example: "SecurePass123"
+
+    DateTime:
+      type: string
+      format: date-time
+      description: ISO 8601形式の日時
+      example: "2025-01-01T00:00:00Z"
+
+    # -------------------------------------------------------------------------
+    # ユーザー関連
+    # -------------------------------------------------------------------------
+    User:
+      type: object
+      description: ユーザーエンティティ
+      required:
+        - id
+        - email
+        - name
+        - role
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        email:
+          $ref: "#/components/schemas/Email"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: ユーザー名
+          example: "山田 太郎"
+        role:
+          $ref: "#/components/schemas/UserRole"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        createdAt:
+          $ref: "#/components/schemas/DateTime"
+        updatedAt:
+          $ref: "#/components/schemas/DateTime"
+
+    UserRole:
+      type: string
+      description: ユーザーロール
+      enum:
+        - admin
+        - user
+        - guest
+      example: "user"
+
+    UserStatus:
+      type: string
+      description: ユーザーステータス
+      enum:
+        - active
+        - inactive
+        - pending
+        - deleted
+      example: "active"
+
+    # -------------------------------------------------------------------------
+    # 認証関連
+    # -------------------------------------------------------------------------
+    LoginRequest:
+      type: object
+      description: ログインリクエスト
+      required:
+        - email
+        - password
+      properties:
+        email:
+          $ref: "#/components/schemas/Email"
+        password:
+          $ref: "#/components/schemas/Password"
+
+    LoginResponse:
+      type: object
+      description: ログインレスポンス
+      required:
+        - token
+        - expiresAt
+        - user
+      properties:
+        token:
+          type: string
+          description: JWTアクセストークン
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expiresAt:
+          $ref: "#/components/schemas/DateTime"
+        user:
+          $ref: "#/components/schemas/User"
+
+    # -------------------------------------------------------------------------
+    # エラーレスポンス
+    # -------------------------------------------------------------------------
+    ErrorResponse:
+      type: object
+      description: エラーレスポンス
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: エラーコード
+          example: "VALIDATION_EMAIL_INVALID"
+        message:
+          type: string
+          description: エラーメッセージ
+          example: "メールアドレスの形式が正しくありません"
+        details:
+          type: object
+          description: 追加のエラー詳細
+          additionalProperties: true
+
+    ValidationError:
+      type: object
+      description: バリデーションエラー
+      required:
+        - code
+        - message
+        - errors
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "入力値が不正です"
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+              - field
+              - message
+            properties:
+              field:
+                type: string
+                description: エラーが発生したフィールド名
+                example: "email"
+              message:
+                type: string
+                description: フィールド固有のエラーメッセージ
+                example: "メールアドレスの形式が正しくありません"
+
+    # -------------------------------------------------------------------------
+    # ページネーション
+    # -------------------------------------------------------------------------
+    PaginationParams:
+      type: object
+      description: ページネーションパラメータ
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+          description: ページ番号
+          example: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: 1ページあたりの件数
+          example: 20
+
+    PaginationMeta:
+      type: object
+      description: ページネーションメタ情報
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          description: 現在のページ番号
+          example: 1
+        limit:
+          type: integer
+          description: 1ページあたりの件数
+          example: 20
+        total:
+          type: integer
+          description: 総件数
+          example: 100
+        totalPages:
+          type: integer
+          description: 総ページ数
+          example: 5
+
+    # =========================================================================
+    # 以下、プロジェクト固有のスキーマを追加
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # <エンティティ名>
+    # -------------------------------------------------------------------------
+    # <Entity>:
+    #   type: object
+    #   description: <説明>
+    #   required:
+    #     - id
+    #     - <field1>
+    #   properties:
+    #     id:
+    #       $ref: "#/components/schemas/Id"
+    #     <field1>:
+    #       type: string
+    #       description: <説明>
+
+  # ---------------------------------------------------------------------------
+  # セキュリティスキーム
+  # ---------------------------------------------------------------------------
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWTによるBearer認証
