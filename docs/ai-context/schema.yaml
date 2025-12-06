@@ -12,6 +12,367 @@ info:
   title: <プロジェクト名> API Schema
   version: 1.0.0
   description: 型定義の唯一のソース
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+# =============================================================================
+# サーバー定義
+# =============================================================================
+servers:
+  - url: http://localhost:3000/api/v1
+    description: ローカル開発環境
+  - url: https://staging.example.com/api/v1
+    description: ステージング環境
+  - url: https://api.example.com/v1
+    description: 本番環境
+
+# =============================================================================
+# タグ定義
+# =============================================================================
+tags:
+  - name: Auth
+    description: 認証関連のエンドポイント
+  - name: Users
+    description: ユーザー管理のエンドポイント
+  - name: Health
+    description: ヘルスチェック
+
+# =============================================================================
+# APIエンドポイント
+# =============================================================================
+paths:
+  # ---------------------------------------------------------------------------
+  # ヘルスチェック
+  # ---------------------------------------------------------------------------
+  /health:
+    get:
+      tags:
+        - Health
+      summary: ヘルスチェック
+      description: APIサーバーの稼働状況を確認する
+      operationId: getHealth
+      responses:
+        "200":
+          description: 正常稼働中
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    $ref: "#/components/schemas/DateTime"
+
+  # ---------------------------------------------------------------------------
+  # 認証
+  # ---------------------------------------------------------------------------
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: ログイン
+      description: メールアドレスとパスワードでログインし、JWTトークンを取得する
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: 認証失敗
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                code: "AUTH_INVALID_CREDENTIALS"
+                message: "メールアドレスまたはパスワードが正しくありません"
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: ログアウト
+      description: 現在のセッションを終了する
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: ログアウト成功
+        "401":
+          description: 認証が必要
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: トークンリフレッシュ
+      description: アクセストークンを更新する
+      operationId: refreshToken
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: トークン更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: 無効なトークン
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ---------------------------------------------------------------------------
+  # ユーザー管理
+  # ---------------------------------------------------------------------------
+  /users:
+    get:
+      tags:
+        - Users
+      summary: ユーザー一覧取得
+      description: ユーザーの一覧をページネーション付きで取得する
+      operationId: getUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: ページ番号
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: 1ページあたりの件数
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          description: ステータスでフィルタ
+          schema:
+            $ref: "#/components/schemas/UserStatus"
+        - name: role
+          in: query
+          description: ロールでフィルタ
+          schema:
+            $ref: "#/components/schemas/UserRole"
+        - name: search
+          in: query
+          description: 名前またはメールアドレスで検索
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ユーザー一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          description: 認証が必要
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 権限不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      tags:
+        - Users
+      summary: ユーザー作成
+      description: 新しいユーザーを作成する
+      operationId: createUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: ユーザー作成成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: 認証が必要
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: メールアドレスが既に使用されている
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                code: "USER_EMAIL_DUPLICATE"
+                message: "このメールアドレスは既に登録されています"
+
+  /users/{userId}:
+    get:
+      tags:
+        - Users
+      summary: ユーザー詳細取得
+      description: 指定したユーザーの詳細情報を取得する
+      operationId: getUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: ユーザー詳細
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: 認証が必要
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                code: "USER_NOT_FOUND"
+                message: "指定されたユーザーは存在しません"
+
+    patch:
+      tags:
+        - Users
+      summary: ユーザー更新
+      description: 指定したユーザーの情報を部分更新する
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: ユーザー更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: 認証が必要
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags:
+        - Users
+      summary: ユーザー削除
+      description: 指定したユーザーを削除する（論理削除）
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: ユーザー削除成功
+        "401":
+          description: 認証が必要
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 権限不足（自分自身は削除不可）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 # =============================================================================
 # 共通スキーマ
@@ -130,6 +491,47 @@ components:
           $ref: "#/components/schemas/DateTime"
         user:
           $ref: "#/components/schemas/User"
+
+    # -------------------------------------------------------------------------
+    # ユーザー作成・更新リクエスト
+    # -------------------------------------------------------------------------
+    CreateUserRequest:
+      type: object
+      description: ユーザー作成リクエスト
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          $ref: "#/components/schemas/Email"
+        password:
+          $ref: "#/components/schemas/Password"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: ユーザー名
+          example: "山田 太郎"
+        role:
+          $ref: "#/components/schemas/UserRole"
+
+    UpdateUserRequest:
+      type: object
+      description: ユーザー更新リクエスト（部分更新）
+      properties:
+        email:
+          $ref: "#/components/schemas/Email"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: ユーザー名
+          example: "山田 太郎"
+        role:
+          $ref: "#/components/schemas/UserRole"
+        status:
+          $ref: "#/components/schemas/UserStatus"
 
     # -------------------------------------------------------------------------
     # エラーレスポンス
@@ -251,6 +653,18 @@ components:
     #     <field1>:
     #       type: string
     #       description: <説明>
+
+  # ---------------------------------------------------------------------------
+  # パラメータ
+  # ---------------------------------------------------------------------------
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: ユーザーID
+      schema:
+        $ref: "#/components/schemas/Id"
 
   # ---------------------------------------------------------------------------
   # セキュリティスキーム
