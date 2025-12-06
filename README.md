@@ -152,7 +152,7 @@ Runbookで運用
 
 ## ライセンス
 
-<ライセンスを記述>
+MIT License - 詳細は [LICENSE](LICENSE) を参照してください。
 
 ## 貢献
 
